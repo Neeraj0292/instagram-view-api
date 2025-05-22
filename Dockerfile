@@ -1,21 +1,37 @@
 FROM python:3.10-slim
 
+# Install required system packages
 RUN apt-get update && apt-get install -y \
-    wget unzip curl gnupg2 ca-certificates \
-    fonts-liberation libappindicator3-1 libasound2 libnspr4 libnss3 libxss1 xdg-utils libgbm-dev \
+    wget gnupg curl unzip fonts-liberation libappindicator3-1 \
+    libasound2 libnspr4 libnss3 libxss1 xdg-utils libgbm-dev \
+    libu2f-udev libvulkan1 libdrm2 libgtk-3-0 libxcomposite1 libxcursor1 \
+    libxdamage1 libxi6 libxtst6 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-    && apt install -y ./google-chrome-stable_current_amd64.deb
+# Download and install Chrome
+RUN wget -q -O google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && apt-get update && apt-get install -y ./google-chrome.deb \
+    && rm google-chrome.deb
 
-RUN CHROME_VERSION=$(google-chrome --version | cut -d " " -f 3) && \
-    CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE") && \
-    wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" && \
-    unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/
+# Install ChromeDriver matching the installed Chrome version
+RUN CHROME_VERSION=$(google-chrome --version | sed 's/Google Chrome //') && \
+    DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE") && \
+    wget -q "https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip" && \
+    unzip chromedriver_linux64.zip && mv chromedriver /usr/local/bin/ && chmod +x /usr/local/bin/chromedriver && \
+    rm chromedriver_linux64.zip
 
+# Set display port (for headless mode)
+ENV DISPLAY=:99
+
+# Set working directory
 WORKDIR /app
-COPY . /app
 
+# Copy files
+COPY . .
+
+# Install Python dependencies
 RUN pip install -r requirements.txt
 
+# Run app
 CMD ["python", "main.py"]
+
