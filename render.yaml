@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: instagram-view-api
+    env: docker
+    plan: free
+    autoDeploy: true
